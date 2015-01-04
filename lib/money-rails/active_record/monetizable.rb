@@ -147,16 +147,10 @@ module MoneyRails
               if value.is_a?(Money)
                 money = value
               else
-                begin
-                  money = value.to_money(public_send("currency_for_#{name}"))
-                rescue NoMethodError
-                  return nil
-                rescue ArgumentError
+                money = begin
+                  value.to_money(public_send("currency_for_#{name}"))
+                rescue Exception
                   raise if MoneyRails.raise_error_on_money_parsing
-                  return nil
-                rescue Money::Currency::UnknownCurrency
-                  raise if MoneyRails.raise_error_on_money_parsing
-                  return nil
                 end
               end
             end

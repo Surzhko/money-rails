@@ -91,13 +91,33 @@ if defined? ActiveRecord
         after { MoneyRails.raise_error_on_money_parsing = false }
 
         it "raises exception when a String value with hyphen is assigned" do
-          expect { product.accessor_price = "10-235" }.to raise_error
+          expect { product.accessor_price = "10-235" }.to raise_error(ArgumentError)
+        end
+
+        it "and passed wrong currency" do
+          expect { product.accessor_price = "235.00 CURRENCY" }.to raise_error(Money::Currency::UnknownCurrency)
+        end
+
+        it "and raised error on parsing" do
+          value = '$666.13'
+          allow(value).to receive(:to_money).and_raise(Exception)
+          expect { product.accessor_price = value }.to raise_error
         end
       end
 
       context "when MoneyRails.raise_error_on_money_parsing is false (default)" do
         it "does not raise exception when a String value with hyphen is assigned" do
           expect { product.accessor_price = "10-235" }.not_to raise_error
+        end
+
+        it "and passed wrong currency" do
+          expect { product.accessor_price = "235.00 CURRENCY" }.not_to raise_error
+        end
+
+        it "and raised error on parsing" do
+          value = '$666.13'
+          allow(value).to receive(:to_money).and_raise(Exception)
+          expect { product.accessor_price = value }.to_not raise_error
         end
       end
 
@@ -328,8 +348,9 @@ if defined? ActiveRecord
 
       it "doesn't save nil values if validation is used and nil is not allowed" do
         product.price = nil
-        product.save
-        expect(product.price_cents).not_to be_nil
+        expect(product.save).to be_falsey
+        expect(product.price_cents).to be_nil
+        expect(product.reload.price_cents).not_to be_nil
       end
 
       it "resets money_before_type_cast attr every time a save operation occurs" do
